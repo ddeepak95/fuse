@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 export const runtime = "edge";
-export const preferredRegion = "all";
+export const preferredRegion = "sfo1";
 
 export async function GET(req) {
   return NextResponse.json({
