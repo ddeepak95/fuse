@@ -28,7 +28,7 @@ export async function POST(req) {
   let openAiResponse = await callOpenAi.json();
   let openAiGen = openAiResponse.choices[0].text;
   return NextResponse.json({
-    prompt: `Prompt I sent is ${body.prompt}`,
+    prompt: body.prompt,
     aiResponse: openAiGen,
   });
 }
