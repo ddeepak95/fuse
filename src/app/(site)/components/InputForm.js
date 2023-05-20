@@ -188,6 +188,7 @@ const InputForm = (props) => {
           userDetails.accessGroup !== accessCodes.treatment)
       ) {
         setInvalidLink(true);
+        setLoading(false);
       } else {
         (async () => {
           let currentData = await getCurrentDataFromFirestore(userDetails.id);
@@ -201,6 +202,8 @@ const InputForm = (props) => {
           setLoading(false);
         })();
       }
+    } else {
+      setLoading(false);
     }
   }, [userDetails]);
 
