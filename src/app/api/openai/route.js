@@ -11,7 +11,7 @@ export async function GET(req) {
 
 export async function POST(req) {
   let body = await req.json();
-  let callOpenAi = await fetch("https://api.openai.com/v1/completions", {
+  let callOpenAi = await fetch("https://api.openai.com/v1/chat/completions", {
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${process.env.OPENAI_API_KEY ?? ""}`,
@@ -19,14 +19,17 @@ export async function POST(req) {
     },
     method: "POST",
     body: JSON.stringify({
-      model: "text-davinci-003",
-      max_tokens: 2000,
-      temperature: 0.7,
-      prompt: body.prompt,
+      model: "gpt-4",
+      max_tokens: 400,
+      temperature: 0.3,
+      messages: [
+        { role: "system", content: body.systemContext },
+        { role: "user", content: body.speechText },
+      ],
     }),
   });
   let openAiResponse = await callOpenAi.json();
-  let openAiGen = openAiResponse.choices[0].text;
+  let openAiGen = openAiResponse.choices[0].message.content;
   return NextResponse.json({
     prompt: body.prompt,
     aiResponse: openAiGen,

@@ -1,14 +1,24 @@
 "use client";
 
 import { firestoreDatabase } from "@/firebase/config";
-import { doc, setDoc, getDoc, collection } from "firebase/firestore";
-import { useEffect, useState, useRef } from "react";
+import { doc, setDoc, getDoc } from "firebase/firestore";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import Swal from "sweetalert2";
 import Loader from "./components/Loader";
 import { staticWords } from "./staticWordsList";
 
 const accessCodes = { control: "control", treatment: "treatment" };
+
+const speechSections = {
+  whatLearningMathIsLike: "What Learning Math is Like",
+  strugglingInClass: "Struggling in Class",
+  askingQuestions: "Asking Questions",
+  revisingAndRedoingYourWork: "Revising and Redoing Your Work",
+  exams: "Exams",
+  howStudentsUsuallyPerform: "How Students Usually Perform",
+  finalThoughts: "Final Thoughts",
+};
 
 async function saveDraftToFirestore(user, data) {
   await setDoc(
@@ -30,7 +40,6 @@ async function saveFeedbackToFirestore(user, userType, data) {
     { merge: true }
   );
   let timeStamp = new Date().toISOString();
-  console.log(timeStamp);
   await setDoc(
     doc(firestoreDatabase, "users", user, "logs", timeStamp),
     {
@@ -51,13 +60,16 @@ async function getCurrentDataFromFirestore(user) {
   }
 }
 
-async function getFeedbackFromOpenAI(text) {
+async function getFeedbackFromOpenAI(systemContext, speechText) {
   let response = await fetch("/api/openai", {
     method: "POST",
     headers: {
       "Content-Type": "application/json;charset=utf-8",
     },
-    body: JSON.stringify({ prompt: text }),
+    body: JSON.stringify({
+      systemContext: systemContext,
+      speechText: speechText,
+    }),
   });
 
   let data = await response.json();
@@ -86,6 +98,13 @@ const escapeRegExpMatch = function (s) {
 const isExactMatch = (str, match) => {
   return new RegExp(`\\b${escapeRegExpMatch(match)}\\b`).test(str);
 };
+
+function keepOnlyUniqueWords(arr) {
+  var unique = arr.filter(
+    (value, index, array) => array.indexOf(value) === index
+  );
+  return unique;
+}
 
 function pickThreeRandomElements(arr) {
   if (arr.length < 3) {
@@ -122,29 +141,19 @@ function giveStaticFeedback(text) {
       matchWords = [...matchWords, element];
     }
   });
-  let wordsChosenForFeedback = pickThreeRandomElements(matchWords);
+  let uniqueKeywords = keepOnlyUniqueWords(matchWords);
+  let wordsChosenForFeedback = pickThreeRandomElements(uniqueKeywords);
   let feedbackText = assignStaticFeedbackText(wordsChosenForFeedback);
   return feedbackText;
 }
 
-async function getFeedback(accessGroup, inputData) {
-  let feedbackData = {};
-  for (const element in inputData) {
-    let text = inputData[element];
-    let feedback = "";
-    if (text !== "") {
-      if (accessGroup === accessCodes.control) {
-        //Get Static Feedback
-        feedback = giveStaticFeedback(text);
-      } else if (accessGroup === accessCodes.treatment) {
-        // Get Feedback form OpenAI
-        feedback = await getFeedbackFromOpenAI("Give feedback on: " + text);
-      }
-    }
-    let feedbackObj = { text: text, feedback: feedback };
-    feedbackData[element] = feedbackObj;
-  }
-  return feedbackData;
+function getSystemContext(speechType) {
+  let systemContexts = {
+    whatLearningMathIsLike:
+      'You should pass/fail user input on the following:\n1. The user input tells students that learning math may be challenging, but every student can learn.\n2. The user input tells students that they belong in the course regardless of their past experiences.\nThe user input may not use the exact language listed in the metric and still pass.\nIf the speech passes on both metrics follow the procedure here: Output the text ""Congratulations, this is a great speech! It looks like you told students that math can be challenging, but that they all have the ability to learn when you wrote:"" Insert the line from the user input that passed metric 1. Output the text ""You also told your students that they belong in your course by writing:"" Insert the line from user input that passed on metric 2.\nIf the speech passes on metric 1 but fails on metric 2 follow the procedure here: Output the text ""Congratulations, this is a great speech! It looks like you told students that math can be challenging, but that they all have the ability to learn when you wrote:"" Insert the line from the user input that passed on metric 1. Output the text ""There\'s always room for improvement. Some students struggle with feeling that they don\'t belong in their courses, especially difficult spaces like math classes. Could you think of a way to make students feel like they belong?""\nIf the speech fails on metric 1 but passes on metric 2, follow the procedure here: Output the text ""Congratulations, this is a great speech! Most speeches perform better in this section when they explain that math might be challenging, but that every student has the chance to succeed. Could you try to find a way to incorporate this into your speech?" Output the text "However, you did a great job telling your students that they belong in your course by writing:"" Insert the line from user input that passed on metric 2.\nIf the speech fails on both metrics, follow the procedure here: Output the text ""Congratulations, this is a great first step. Many speeches perform well in this section when they do two things. First, they tell students that math can be challenging, but that they all have the opportunity to succeed. Second, they tell students that regardless of their past experiences, all students belong in the course. Can you think of a way to incorporate these ideas into your speech?""',
+  };
+
+  return systemContexts[speechType];
 }
 
 const InputForm = (props) => {
@@ -153,6 +162,7 @@ const InputForm = (props) => {
   const [feedbackData, setFeedbackData] = useState({});
   const [invalidLink, setInvalidLink] = useState(true);
   const [loading, setLoading] = useState(true);
+  const [loaderStatus, setLoaderStatus] = useState("");
   const [draftForm, setDraftForm] = useState({});
   const [mode, setMode] = useState("write");
   function updateFeedbackData(data) {
@@ -165,6 +175,10 @@ const InputForm = (props) => {
 
   function updateMode(text) {
     setMode(text);
+  }
+
+  function updateLoaderStatus(text) {
+    setLoaderStatus(text);
   }
 
   useEffect(() => {
@@ -209,7 +223,7 @@ const InputForm = (props) => {
 
   return (
     <>
-      {loading && <Loader />}
+      {loading && <Loader currentElement={loaderStatus} />}
       {invalidLink ? (
         <>
           <p className="text-center mb-6">
@@ -258,6 +272,7 @@ const InputForm = (props) => {
             updateFeedbackState={updateFeedbackData}
             setLoader={updateLoading}
             setMode={updateMode}
+            setLoaderStatus={updateLoaderStatus}
           />
           <FeedbackUnit
             className={mode === "feedback" ? "block" : "hidden"}
@@ -304,12 +319,41 @@ const SpeechForm = (props) => {
   async function getAndShowFeedback(data) {
     props.setLoader(true);
     saveDraft();
+    async function getFeedback(accessGroup, inputData) {
+      let feedbackData = {};
+      for (const element in inputData) {
+        props.setLoaderStatus(
+          "Getting AI feedback for " +
+            speechSections[element] +
+            " section. \nThis might take some time. Please be patient!"
+        );
+        let text = inputData[element];
+        let feedback = "";
+        if (text !== "") {
+          if (accessGroup === accessCodes.control) {
+            //Get Static Feedback
+            feedback = giveStaticFeedback(text);
+          } else if (accessGroup === accessCodes.treatment) {
+            // Get Feedback form OpenAI
+            let systemContext = getSystemContext("whatLearningMathIsLike");
+            feedback = await getFeedbackFromOpenAI(systemContext, text);
+          }
+        }
+        let feedbackObj = { text: text, feedback: feedback };
+        feedbackData[element] = feedbackObj;
+      }
+      return feedbackData;
+    }
     let feedback = getFeedback(props.userGroup, data);
     feedback.then((data) => {
+      props.setLoaderStatus("Saving Feedback");
       props.updateFeedbackState(data);
       saveFeedbackToFirestore(props.userId, props.userGroup, data);
       window.scrollTo(0, 0);
-      setTimeout(() => props.setLoader(false), 2000);
+      setTimeout(() => {
+        props.setLoader(false);
+        props.setLoaderStatus("");
+      }, 2000);
       props.setMode("feedback");
     });
   }
@@ -324,7 +368,7 @@ const SpeechForm = (props) => {
       <form id="speechPrompts" onSubmit={handleSubmit(onSubmit, onError)}>
         <InputBox
           name="whatLearningMathIsLike"
-          label="What Learning Math is Like"
+          label={speechSections["whatLearningMathIsLike"]}
           placeholder="Enter text here..."
           errors={errors}
           register={register}
@@ -335,7 +379,7 @@ const SpeechForm = (props) => {
         />
         <InputBox
           name="strugglingInClass"
-          label="Struggling in Class"
+          label={speechSections["strugglingInClass"]}
           placeholder="Enter text here..."
           errors={errors}
           register={register}
@@ -346,7 +390,7 @@ const SpeechForm = (props) => {
         />
         <InputBox
           name="askingQuestions"
-          label="Asking Questions"
+          label={speechSections["askingQuestions"]}
           placeholder="Enter text here..."
           errors={errors}
           register={register}
@@ -357,7 +401,7 @@ const SpeechForm = (props) => {
         />
         <InputBox
           name="revisingAndRedoingYourWork"
-          label="Revising and Redoing Your Work"
+          label={speechSections["revisingAndRedoingYourWork"]}
           placeholder="Enter text here..."
           errors={errors}
           register={register}
@@ -368,7 +412,7 @@ const SpeechForm = (props) => {
         />
         <InputBox
           name="exams"
-          label="Exams"
+          label={speechSections["exams"]}
           placeholder="Enter text here..."
           errors={errors}
           register={register}
@@ -379,7 +423,7 @@ const SpeechForm = (props) => {
         />
         <InputBox
           name="howStudentsUsuallyPerform"
-          label="How Students Usually Perform"
+          label={speechSections["howStudentsUsuallyPerform"]}
           placeholder="Enter text here..."
           errors={errors}
           register={register}
@@ -390,7 +434,7 @@ const SpeechForm = (props) => {
         />
         <InputBox
           name="finalThoughts"
-          label="Final Thoughts"
+          label={speechSections["finalThoughts"]}
           placeholder="Enter text here..."
           errors={errors}
           register={register}
@@ -483,37 +527,37 @@ const FeedbackUnit = (props) => {
   return (
     <div className={props.className}>
       <FeedbackComponent
-        type="What Learning Math Is Like"
+        type={speechSections["whatLearningMathIsLike"]}
         text={props.data["whatLearningMathIsLike"].text}
         feedback={props.data["whatLearningMathIsLike"].feedback}
       />
       <FeedbackComponent
-        type="Struggling in Class"
+        type={speechSections["strugglingInClass"]}
         text={props.data["strugglingInClass"].text}
         feedback={props.data["strugglingInClass"].feedback}
       />
       <FeedbackComponent
-        type="Asking Questions"
+        type={speechSections["askingQuestions"]}
         text={props.data["askingQuestions"].text}
         feedback={props.data["askingQuestions"].feedback}
       />
       <FeedbackComponent
-        type="Revising and Redoing Your Work"
+        type={speechSections["revisingAndRedoingYourWork"]}
         text={props.data["revisingAndRedoingYourWork"].text}
         feedback={props.data["revisingAndRedoingYourWork"].feedback}
       />
       <FeedbackComponent
-        type="Exams"
+        type={speechSections["exams"]}
         text={props.data["exams"].text}
         feedback={props.data["exams"].feedback}
       />
       <FeedbackComponent
-        type="How Students Usually Perform"
+        type={speechSections["howStudentsUsuallyPerform"]}
         text={props.data["howStudentsUsuallyPerform"].text}
         feedback={props.data["howStudentsUsuallyPerform"].feedback}
       />
       <FeedbackComponent
-        type="Final Thoughts"
+        type={speechSections["finalThoughts"]}
         text={props.data["finalThoughts"].text}
         feedback={props.data["finalThoughts"].feedback}
       />
