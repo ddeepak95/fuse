@@ -26,7 +26,16 @@ export default function Home() {
       console.log("Try Query Parameters:");
       console.log(urlParams);
       if (Object.keys(urlParams).length > 0) {
-        setUid(urlParams.id);
+        if (
+          urlParams.id !== undefined &&
+          urlParams.id !== null &&
+          urlParams.id !== ""
+        ) {
+          setUid(urlParams.id);
+        } else {
+          throw "Invalid Id";
+        }
+
         console.log("UID: " + urlParams.id + " ACCESS: " + urlParams.access);
         LogRocket.identify(urlParams.id);
         let accessCode = urlParams.access;
