@@ -7,10 +7,6 @@ import { useForm } from "react-hook-form";
 import Swal from "sweetalert2";
 import Loader from "./components/Loader";
 import { staticWords } from "./staticWordsList";
-import LogRocket from "logrocket";
-LogRocket.init("6tg6cc/fuse");
-
-const accessCodes = { control: "control", treatment: "treatment" };
 
 const speechSections = {
   whatLearningMathIsLike: "What Learning Math is Like",
@@ -159,11 +155,13 @@ function getSystemContext(speechType) {
 }
 
 const InputForm = (props) => {
-  const [queryParameters, setQueryParameters] = useState();
-  const [userDetails, setUserDetails] = useState({});
+  const userDetails = {
+    id: props.uId,
+    accessGroup: props.accessGroup,
+  };
   const [feedbackData, setFeedbackData] = useState({});
-  const [invalidLink, setInvalidLink] = useState(true);
   const [loading, setLoading] = useState(true);
+  const [loadInitialData, setLoadInitialData] = useState(false);
   const [loaderStatus, setLoaderStatus] = useState("");
   const [draftForm, setDraftForm] = useState({});
   const [mode, setMode] = useState("write");
@@ -184,116 +182,73 @@ const InputForm = (props) => {
   }
 
   useEffect(() => {
-    setQueryParameters(new URLSearchParams(window.location.search));
-  }, []);
-
-  useEffect(() => {
-    if (queryParameters?.size > 0) {
-      let uid = queryParameters.get("id");
-      let access = "";
-      let accessCode = queryParameters.get("access");
-      if (accessCode.includes(accessCodes.control)) {
-        access = "control";
-      } else if (accessCode.includes(accessCodes.treatment)) {
-        access = "treatment";
-      } else {
-        access = "default";
+    (async () => {
+      let currentData = await getCurrentDataFromFirestore(userDetails.id);
+      if (currentData?.draft !== undefined) {
+        setDraftForm(currentData?.draft);
       }
-
-      setUserDetails({
-        id: uid,
-        accessGroup: access,
-      });
-      LogRocket.identify(uid);
-    }
-  }, [queryParameters]);
-
-  useEffect(() => {
-    if (queryParameters?.size > 0) {
-      if (
-        userDetails.id === undefined ||
-        (userDetails.accessGroup !== accessCodes.control &&
-          userDetails.accessGroup !== accessCodes.treatment)
-      ) {
-        setInvalidLink(true);
-        setLoading(false);
-      } else {
-        (async () => {
-          let currentData = await getCurrentDataFromFirestore(userDetails.id);
-          if (currentData?.draft !== undefined) {
-            setDraftForm(currentData?.draft);
-          }
-          if (currentData?.currentFeedbackData !== undefined) {
-            setFeedbackData(currentData?.currentFeedbackData);
-          }
-          setInvalidLink(false);
-          setLoading(false);
-        })();
+      if (currentData?.currentFeedbackData !== undefined) {
+        setFeedbackData(currentData?.currentFeedbackData);
       }
-    } else {
       setLoading(false);
-    }
-  }, [userDetails]);
+      setLoadInitialData(true);
+    })();
+  }, []);
 
   return (
     <>
       {loading && <Loader currentElement={loaderStatus} />}
-      {invalidLink ? (
-        <>
-          <p className="text-center mb-6">
-            Invalid Link. Please check your url.
-          </p>
-        </>
-      ) : (
-        <>
-          <p className="text-center mb-6">
-            Instructions for filling the feedback
-          </p>
-          <div className="text-lg mb-6 font-medium text-center text-gray-500 border-b border-gray-200">
-            <ul className="flex place-content-center flex-wrap -mb-px">
-              <li className="mr-2">
-                <button
-                  onClick={() => setMode("write")}
-                  className={`inline-block p-4 px-8 border-b-4 ${
-                    mode === "write"
-                      ? "border-blue-400 text-gray-900"
-                      : "border-transparent hover:text-gray-600 hover:border-gray-300"
-                  } rounded-t-lg`}
-                >
-                  Write
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => setMode("feedback")}
-                  className={`inline-block p-4 px-8 border-b-4 ${
-                    mode === "feedback"
-                      ? "border-blue-400 text-gray-900"
-                      : "border-transparent hover:text-gray-600 hover:border-gray-300"
-                  } rounded-t-lg `}
-                >
-                  Feedback
-                </button>
-              </li>
-            </ul>
-          </div>
-
-          <SpeechForm
-            className={mode === "write" ? "block" : "hidden"}
-            userId={userDetails.id}
-            userGroup={userDetails.accessGroup}
-            draft={draftForm}
-            updateFeedbackState={updateFeedbackData}
-            setLoader={updateLoading}
-            setMode={updateMode}
-            setLoaderStatus={updateLoaderStatus}
-          />
-          <FeedbackUnit
-            className={mode === "feedback" ? "block" : "hidden"}
-            data={feedbackData}
-          />
-        </>
-      )}
+      <>
+        <p className="text-center mb-6">
+          Instructions for filling the feedback
+        </p>
+        <div className="text-lg mb-6 font-medium text-center text-gray-500 border-b border-gray-200">
+          <ul className="flex place-content-center flex-wrap -mb-px">
+            <li className="mr-2">
+              <button
+                onClick={() => setMode("write")}
+                className={`inline-block p-4 px-8 border-b-4 ${
+                  mode === "write"
+                    ? "border-blue-400 text-gray-900"
+                    : "border-transparent hover:text-gray-600 hover:border-gray-300"
+                } rounded-t-lg`}
+              >
+                Write
+              </button>
+            </li>
+            <li>
+              <button
+                onClick={() => setMode("feedback")}
+                className={`inline-block p-4 px-8 border-b-4 ${
+                  mode === "feedback"
+                    ? "border-blue-400 text-gray-900"
+                    : "border-transparent hover:text-gray-600 hover:border-gray-300"
+                } rounded-t-lg `}
+              >
+                Feedback
+              </button>
+            </li>
+          </ul>
+        </div>
+        {loadInitialData && (
+          <>
+            <SpeechForm
+              className={mode === "write" ? "block" : "hidden"}
+              userId={userDetails.id}
+              userGroup={userDetails.accessGroup}
+              draft={draftForm}
+              updateFeedbackState={updateFeedbackData}
+              setLoader={updateLoading}
+              setMode={updateMode}
+              setLoaderStatus={updateLoaderStatus}
+            />
+            <FeedbackUnit
+              className={mode === "feedback" ? "block" : "hidden"}
+              data={feedbackData}
+            />
+          </>
+        )}
+      </>
     </>
   );
 };
