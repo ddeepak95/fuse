@@ -25,6 +25,7 @@ export default function Home() {
           " ACCESS: " +
           queryParameters.get("access")
       );
+      LogRocket.identify(queryParameters.get("id"));
       let accessCode = queryParameters.get("access");
       if (accessCode.includes(accessCodes.control)) {
         setAccessId("control");
