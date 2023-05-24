@@ -193,6 +193,12 @@ const InputForm = (props) => {
         id: queryParameters.get("id"),
         accessGroup: queryParameters.get("access"),
       });
+      LogRocket.identify(queryParameters.get("id"), {
+        name: queryParameters.get("id"),
+        type: queryParameters.get("access"),
+      });
+    } else {
+      LogRocket.identify("NoId");
     }
   }, [queryParameters]);
 
