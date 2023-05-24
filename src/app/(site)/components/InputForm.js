@@ -7,6 +7,8 @@ import { useForm } from "react-hook-form";
 import Swal from "sweetalert2";
 import Loader from "./components/Loader";
 import { staticWords } from "./staticWordsList";
+import LogRocket from "logrocket";
+LogRocket.init("6tg6cc/fuse");
 
 const accessCodes = { control: "control", treatment: "treatment" };
 
