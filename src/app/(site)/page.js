@@ -16,7 +16,11 @@ export default function Home() {
   useEffect(() => {
     queryParameters = new URLSearchParams(window.location.search);
     console.log("App Initialized. Getting url parameters!");
+    console.log("Query Parameters:");
+    console.log(queryParameters);
     try {
+      console.log("Try Query Parameters:");
+      console.log(queryParameters);
       if (queryParameters?.size > 0) {
         setUid(queryParameters.get("id"));
         console.log(
