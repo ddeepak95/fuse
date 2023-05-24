@@ -16,28 +16,33 @@ export default function Home() {
   useEffect(() => {
     queryParameters = new URLSearchParams(window.location.search);
     console.log("App Initialized. Getting url parameters!");
-
-    if (queryParameters?.size > 0) {
-      setUid(queryParameters.get("id"));
-      console.log(
-        "UID: " +
-          queryParameters.get("id") +
-          " ACCESS: " +
-          queryParameters.get("access")
-      );
-      LogRocket.identify(queryParameters.get("id"));
-      let accessCode = queryParameters.get("access");
-      if (accessCode.includes(accessCodes.control)) {
-        setAccessId("control");
-        setLinkValidity(true);
-      } else if (accessCode.includes(accessCodes.treatment)) {
-        setAccessId("treatment");
-        setLinkValidity(true);
+    try {
+      if (queryParameters?.size > 0) {
+        setUid(queryParameters.get("id"));
+        console.log(
+          "UID: " +
+            queryParameters.get("id") +
+            " ACCESS: " +
+            queryParameters.get("access")
+        );
+        LogRocket.identify(queryParameters.get("id"));
+        let accessCode = queryParameters.get("access");
+        if (accessCode.includes(accessCodes.control)) {
+          setAccessId("control");
+          setLinkValidity(true);
+        } else if (accessCode.includes(accessCodes.treatment)) {
+          setAccessId("treatment");
+          setLinkValidity(true);
+        }
+      } else {
+        console.log("No url params found!");
+        setLinkValidity(false);
       }
-    } else {
-      console.log("No url params found!");
+    } catch (e) {
+      console.log(e);
       setLinkValidity(false);
     }
+
     setWindowLoaded(true);
   }, []);
 
