@@ -189,12 +189,22 @@ const InputForm = (props) => {
 
   useEffect(() => {
     if (queryParameters?.size > 0) {
+      let uid = queryParameters.get("id");
+      let access = "";
+      let accessCode = queryParameters.get("access");
+      if (accessCode.includes(accessCodes.control)) {
+        access = "control";
+      } else if (accessCode.includes(accessCodes.treatment)) {
+        access = "treatment";
+      } else {
+        access = "default";
+      }
+
       setUserDetails({
-        id: queryParameters.get("id"),
-        accessGroup: queryParameters.get("access"),
+        id: uid,
+        accessGroup: access,
       });
-      LogRocket.identify(queryParameters.get("id"));
-      console.log("Logging");
+      LogRocket.identify(uid);
     }
   }, [queryParameters]);
 
@@ -334,10 +344,10 @@ const SpeechForm = (props) => {
         let text = inputData[element];
         let feedback = "";
         if (text !== "") {
-          if (accessGroup === accessCodes.control) {
+          if (accessGroup === "control") {
             //Get Static Feedback
             feedback = giveStaticFeedback(text);
-          } else if (accessGroup === accessCodes.treatment) {
+          } else if (accessGroup === "treatment") {
             // Get Feedback form OpenAI
             let systemContext = getSystemContext("whatLearningMathIsLike");
             feedback = await getFeedbackFromOpenAI(systemContext, text);
