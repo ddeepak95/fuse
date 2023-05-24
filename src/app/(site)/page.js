@@ -16,15 +16,11 @@ export default function Home() {
   useEffect(() => {
     queryParameters = new URLSearchParams(window.location.search);
     console.log("App Initialized. Getting url parameters!");
-    console.log("Query Parameters:");
     let urlParams = {};
     queryParameters.forEach((value, key) => {
-      console.log(value, key);
       urlParams[key] = value;
     });
     try {
-      console.log("Try Query Parameters:");
-      console.log(urlParams);
       if (Object.keys(urlParams).length > 0) {
         if (
           urlParams.id !== undefined &&
@@ -51,7 +47,6 @@ export default function Home() {
         setLinkValidity(false);
       }
     } catch (e) {
-      console.log(e);
       setLinkValidity(false);
     }
 

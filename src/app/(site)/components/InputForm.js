@@ -7,6 +7,7 @@ import { useForm } from "react-hook-form";
 import Swal from "sweetalert2";
 import Loader from "./components/Loader";
 import { staticWords } from "./staticWordsList";
+import DownloadPdf from "./components/DownloadPdf";
 
 const speechSections = {
   whatLearningMathIsLike: "What Learning Math is Like",
@@ -245,6 +246,7 @@ const InputForm = (props) => {
             <FeedbackUnit
               className={mode === "feedback" ? "block" : "hidden"}
               data={feedbackData}
+              setMode={updateMode}
             />
           </>
         )}
@@ -530,6 +532,18 @@ const FeedbackUnit = (props) => {
         text={props.data["finalThoughts"].text}
         feedback={props.data["finalThoughts"].feedback}
       />
+      <div className="text-center">
+        <button
+          onClick={() => {
+            window.scroll(0, 0);
+            props.setMode("write");
+          }}
+          className="bg-cyan-500 hover:bg-cyan-700 mr-2 cursor-pointer px-6 py-3 rounded-lg text-white font-bold"
+        >
+          Revise Speech
+        </button>
+        <DownloadPdf data={props.data} />
+      </div>
     </div>
   );
 };
