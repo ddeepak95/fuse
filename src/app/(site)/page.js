@@ -17,20 +17,19 @@ export default function Home() {
     queryParameters = new URLSearchParams(window.location.search);
     console.log("App Initialized. Getting url parameters!");
     console.log("Query Parameters:");
-    console.log(queryParameters);
+    let urlParams = {};
+    queryParameters.forEach((value, key) => {
+      console.log(value, key);
+      urlParams[key] = value;
+    });
     try {
       console.log("Try Query Parameters:");
-      console.log(queryParameters);
-      if (queryParameters?.size > 0) {
-        setUid(queryParameters.get("id"));
-        console.log(
-          "UID: " +
-            queryParameters.get("id") +
-            " ACCESS: " +
-            queryParameters.get("access")
-        );
-        LogRocket.identify(queryParameters.get("id"));
-        let accessCode = queryParameters.get("access");
+      console.log(urlParams);
+      if (Object.keys(urlParams).length > 0) {
+        setUid(urlParams.id);
+        console.log("UID: " + urlParams.id + " ACCESS: " + urlParams.access);
+        LogRocket.identify(urlParams.id);
+        let accessCode = urlParams.access;
         if (accessCode.includes(accessCodes.control)) {
           setAccessId("control");
           setLinkValidity(true);
