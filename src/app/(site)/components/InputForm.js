@@ -195,8 +195,6 @@ const InputForm = (props) => {
       });
       LogRocket.identify(queryParameters.get("id"));
       console.log("Logging");
-    } else {
-      LogRocket.identify("NoId");
     }
   }, [queryParameters]);
 
