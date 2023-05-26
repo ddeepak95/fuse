@@ -7,7 +7,7 @@ import LogRocket from "logrocket";
 LogRocket.init("6tg6cc/fuse");
 
 export default function Home() {
-  const accessCodes = { control: "control", treatment: "treatment" };
+  const accessCodes = { control: "zxcvb", treatment: "lkjhg" };
   const [windowLoaded, setWindowLoaded] = useState(false);
   const [uid, setUid] = useState();
   const [accessId, setAccessId] = useState();
