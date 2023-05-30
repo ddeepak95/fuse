@@ -85,7 +85,7 @@ const DownloadPdf = (props) => {
   return (
     <>
       <button
-        className="bg-teal-500 hover:bg-teal-700 cursor-pointer px-6 py-3 rounded-lg text-white font-bold"
+        className="bg-fuseYellow hover:bg-fuseYellow-dark cursor-pointer px-6 py-3 rounded-lg text-white font-bold"
         onClick={() => {
           downloadPdf();
         }}

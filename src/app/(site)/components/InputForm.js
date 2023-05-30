@@ -227,7 +227,7 @@ const InputForm = (props) => {
                 onClick={() => setMode("write")}
                 className={`inline-block p-4 px-8 border-b-4 ${
                   mode === "write"
-                    ? "border-blue-400 text-gray-900"
+                    ? "border-fuseBlue-light text-gray-900"
                     : "border-transparent hover:text-gray-600 hover:border-gray-300"
                 } rounded-t-lg`}
               >
@@ -239,7 +239,7 @@ const InputForm = (props) => {
                 onClick={() => setMode("feedback")}
                 className={`inline-block p-4 px-8 border-b-4 ${
                   mode === "feedback"
-                    ? "border-blue-400 text-gray-900"
+                    ? "border-fuseBlue-light text-gray-900"
                     : "border-transparent hover:text-gray-600 hover:border-gray-300"
                 } rounded-t-lg `}
               >
@@ -448,12 +448,12 @@ const SpeechForm = (props) => {
                 timer: 1000,
               });
             }}
-            className="bg-cyan-500 hover:bg-cyan-700 mr-2 cursor-pointer px-6 py-3 rounded-lg text-white font-bold"
+            className="bg-fuseBlue-lighter hover:bg-fuseBlue mr-2 cursor-pointer px-6 py-3 rounded-lg text-white font-bold"
           >
             Save Draft
           </button>
           <input
-            className="bg-green-500 hover:bg-green-700 cursor-pointer px-6 py-3 rounded-lg text-white font-bold"
+            className="bg-fuseYellow hover:bg-fuseYellow-dark cursor-pointer px-6 py-3 rounded-lg text-white font-bold"
             value="Get Feedback"
             type="submit"
           />
@@ -560,7 +560,7 @@ const FeedbackUnit = (props) => {
             window.scroll(0, 0);
             props.setMode("write");
           }}
-          className="bg-cyan-500 hover:bg-cyan-700 mr-2 cursor-pointer px-6 py-3 rounded-lg text-white font-bold"
+          className="bg-fuseBlue-lighter hover:bg-fuseBlue mr-2 cursor-pointer px-6 py-3 rounded-lg text-white font-bold"
         >
           Revise Speech
         </button>
