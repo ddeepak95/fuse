@@ -152,6 +152,24 @@ function giveStaticFeedback(text) {
   return feedbackText;
 }
 
+function giveStaticFeedbackV2(type) {
+  const feedbacks = {
+    whatLearningMathIsLike: ["Static Feedback for What Learning Math is Like"],
+    strugglingInClass: ["Static Feedback for Struggling in Class"],
+    askingQuestions: ["Static Feedback for Asking Questions"],
+    revisingAndRedoingYourWork: [
+      "Static Feedback for Revising and Redoing Your Work",
+    ],
+    exams: ["Static Feedback for Exams"],
+    howStudentsUsuallyPerform: [
+      "Static Feedback for How Students Usually Perform",
+    ],
+    finalThoughts: ["Static Feedback for Final Thoughts"],
+  };
+  let feedbackText = feedbacks[type];
+  return feedbackText;
+}
+
 function getSystemContext(speechType) {
   let systemContexts = {
     whatLearningMathIsLike:
@@ -255,7 +273,8 @@ const InputForm = (props) => {
       if (text !== "") {
         if (userDetails.accessGroup === "control") {
           //Get Static Feedback
-          feedbackText = giveStaticFeedback(text);
+          feedbackText = giveStaticFeedbackV2(element);
+          console.log(feedbackText);
         } else if (userDetails.accessGroup === "treatment") {
           // Get Feedback form OpenAI
           let systemContext = getSystemContext(element);
