@@ -8,6 +8,7 @@ import Swal from "sweetalert2";
 import Loader from "./components/Loader";
 import { staticWords } from "./staticWordsList";
 import DownloadPdf from "./components/DownloadPdf";
+import { RotatingLines } from "react-loader-spinner";
 
 const speechSections = {
   whatLearningMathIsLike: "What Learning Math is Like",
@@ -172,6 +173,8 @@ function getSystemContext(speechType) {
   return systemContexts[speechType];
 }
 
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 const InputForm = (props) => {
   const userDetails = {
     id: props.uId,
@@ -183,20 +186,114 @@ const InputForm = (props) => {
   const [loaderStatus, setLoaderStatus] = useState("");
   const [draftForm, setDraftForm] = useState({});
   const [mode, setMode] = useState("write");
-  function updateFeedbackData(data) {
-    setFeedbackData(data);
-  }
 
-  function updateLoading(bool) {
-    setLoading(bool);
+  async function getAndShowFeedback(data) {
+    setLoading(true);
+    saveDraft(userDetails.id);
+
+    const updateFeedbackData = (key, feedbackObj) => {
+      setFeedbackData((prevState) => ({
+        ...prevState,
+        [key]: feedbackObj,
+      }));
+    };
+
+    let tempFeedbackData = {
+      whatLearningMathIsLike: {
+        text: data["whatLearningMathIsLike"],
+        feedback: ["Loading"],
+        loading: true,
+      },
+      strugglingInClass: {
+        text: data["strugglingInClass"],
+        feedback: ["Loading"],
+        loading: true,
+      },
+      askingQuestions: {
+        text: data["askingQuestions"],
+        feedback: ["Loading"],
+        loading: true,
+      },
+      revisingAndRedoingYourWork: {
+        text: data["revisingAndRedoingYourWork"],
+        feedback: ["Loading"],
+        loading: true,
+      },
+      exams: {
+        text: data["exams"],
+        feedback: ["Loading"],
+        loading: true,
+      },
+      howStudentsUsuallyPerform: {
+        text: data["howStudentsUsuallyPerform"],
+        feedback: ["Loading"],
+        loading: true,
+      },
+      finalThoughts: {
+        text: data["finalThoughts"],
+        feedback: ["Loading"],
+        loading: true,
+      },
+    };
+    const feedbackSections = [
+      "whatLearningMathIsLike",
+      "strugglingInClass",
+      "askingQuestions",
+      "revisingAndRedoingYourWork",
+      "exams",
+      "howStudentsUsuallyPerform",
+      "finalThoughts",
+    ];
+
+    setLoaderStatus("Getting AI feedback. \n This might take some time!");
+    setFeedbackData(tempFeedbackData);
+
+    for (let i = 0; i < feedbackSections.length; i++) {
+      let element = feedbackSections[i];
+      let text = data[element];
+      let feedbackText = "";
+      if (text !== "") {
+        if (userDetails.accessGroup === "control") {
+          //Get Static Feedback
+          feedbackText = giveStaticFeedback(text);
+        } else if (userDetails.accessGroup === "treatment") {
+          // Get Feedback form OpenAI
+          let systemContext = getSystemContext(element);
+          try {
+            feedbackText = await getFeedbackFromOpenAI(systemContext, text);
+          } catch (e) {
+            console.log(e);
+            feedbackText = ["Error in AI System. Please try after sometime."];
+          }
+        }
+      }
+      let feedbackObj = {
+        text: text,
+        feedback: feedbackText,
+        loading: false,
+      };
+      updateFeedbackData(element, feedbackObj);
+      tempFeedbackData[element] = feedbackObj;
+      if (i === 0) {
+        setTimeout(() => {
+          setLoading(false);
+          window.scrollTo(0, 0);
+          setMode("feedback");
+        }, 2000);
+      }
+      if (i === feedbackSections.length - 1) {
+        saveFeedbackToFirestore(
+          userDetails.id,
+          userDetails.accessGroup,
+          tempFeedbackData
+        );
+        setLoaderStatus("");
+      }
+    }
   }
 
   function updateMode(text) {
     setMode(text);
-  }
-
-  function updateLoaderStatus(text) {
-    setLoaderStatus(text);
   }
 
   useEffect(() => {
@@ -255,10 +352,7 @@ const InputForm = (props) => {
               userId={userDetails.id}
               userGroup={userDetails.accessGroup}
               draft={draftForm}
-              updateFeedbackState={updateFeedbackData}
-              setLoader={updateLoading}
-              setMode={updateMode}
-              setLoaderStatus={updateLoaderStatus}
+              getAndShowFeedback={getAndShowFeedback}
             />
             <FeedbackUnit
               className={mode === "feedback" ? "block" : "hidden"}
@@ -273,6 +367,12 @@ const InputForm = (props) => {
 };
 
 export default InputForm;
+
+async function saveDraft(uId) {
+  const form = document.getElementById("speechPrompts");
+  const formData = await getFormValues(form);
+  saveDraftToFirestore(uId, formData);
+}
 
 const SpeechForm = (props) => {
   const {
@@ -289,7 +389,7 @@ const SpeechForm = (props) => {
     },
   });
   const onSubmit = async (data) => {
-    getAndShowFeedback(data);
+    props.getAndShowFeedback(data);
   };
   const onError = async (errors, e) => {
     Swal.fire({
@@ -304,57 +404,6 @@ const SpeechForm = (props) => {
       getAndShowFeedback(formValues);
     });
   };
-  async function getAndShowFeedback(data) {
-    props.setLoader(true);
-    saveDraft();
-    async function getFeedback(accessGroup, inputData) {
-      let feedbackData = {};
-      for (const element in inputData) {
-        props.setLoaderStatus(
-          "Getting AI feedback for " +
-            speechSections[element] +
-            " section. \nThis might take some time. Please be patient!"
-        );
-        let text = inputData[element];
-        let feedbackText = "";
-        if (text !== "") {
-          if (accessGroup === "control") {
-            //Get Static Feedback
-            feedbackText = giveStaticFeedback(text);
-          } else if (accessGroup === "treatment") {
-            // Get Feedback form OpenAI
-            let systemContext = getSystemContext(element);
-            try {
-              feedbackText = await getFeedbackFromOpenAI(systemContext, text);
-            } catch (e) {
-              console.log(e);
-              feedbackText = ["Error in AI System. Please try after sometime."];
-            }
-          }
-        }
-        let feedbackObj = { text: text, feedback: feedbackText };
-        feedbackData[element] = feedbackObj;
-      }
-      return feedbackData;
-    }
-    let feedback = getFeedback(props.userGroup, data);
-    feedback.then((data) => {
-      props.setLoaderStatus("Saving Feedback");
-      props.updateFeedbackState(data);
-      saveFeedbackToFirestore(props.userId, props.userGroup, data);
-      window.scrollTo(0, 0);
-      setTimeout(() => {
-        props.setLoader(false);
-        props.setLoaderStatus("");
-      }, 2000);
-      props.setMode("feedback");
-    });
-  }
-  async function saveDraft() {
-    const form = document.getElementById("speechPrompts");
-    const formData = await getFormValues(form);
-    saveDraftToFirestore(props.userId, formData);
-  }
 
   return (
     <div className={props.className}>
@@ -440,7 +489,7 @@ const SpeechForm = (props) => {
           <button
             onClick={(e) => {
               e.preventDefault();
-              saveDraft();
+              saveDraft(props.userId);
               Swal.fire({
                 icon: "success",
                 title: "Your work has been saved",
@@ -523,36 +572,43 @@ const FeedbackUnit = (props) => {
         type={speechSections["whatLearningMathIsLike"]}
         text={props.data["whatLearningMathIsLike"].text}
         feedback={props.data["whatLearningMathIsLike"].feedback}
+        loading={props.data["whatLearningMathIsLike"].loading}
       />
       <FeedbackComponent
         type={speechSections["strugglingInClass"]}
         text={props.data["strugglingInClass"].text}
         feedback={props.data["strugglingInClass"].feedback}
+        loading={props.data["strugglingInClass"].loading}
       />
       <FeedbackComponent
         type={speechSections["askingQuestions"]}
         text={props.data["askingQuestions"].text}
         feedback={props.data["askingQuestions"].feedback}
+        loading={props.data["askingQuestions"].loading}
       />
       <FeedbackComponent
         type={speechSections["revisingAndRedoingYourWork"]}
         text={props.data["revisingAndRedoingYourWork"].text}
         feedback={props.data["revisingAndRedoingYourWork"].feedback}
+        loading={props.data["revisingAndRedoingYourWork"].loading}
       />
       <FeedbackComponent
         type={speechSections["exams"]}
         text={props.data["exams"].text}
         feedback={props.data["exams"].feedback}
+        loading={props.data["exams"].loading}
       />
       <FeedbackComponent
         type={speechSections["howStudentsUsuallyPerform"]}
         text={props.data["howStudentsUsuallyPerform"].text}
         feedback={props.data["howStudentsUsuallyPerform"].feedback}
+        loading={props.data["howStudentsUsuallyPerform"].loading}
       />
       <FeedbackComponent
         type={speechSections["finalThoughts"]}
         text={props.data["finalThoughts"].text}
         feedback={props.data["finalThoughts"].feedback}
+        loading={props.data["finalThoughts"].loading}
       />
       <div className="text-center">
         <button
@@ -590,24 +646,60 @@ const FeedbackComponent = (props) => {
         <p className="text-xs uppercase tracking-widest font-bold text-slate-500 mb-2">
           Feedback
         </p>
-        {props.feedback.length === 0 ? (
-          <>
-            <p className="italic text-neutral-500">No feedback available!</p>
-          </>
+        {props.loading ? (
+          <FeedbackInlineLoader />
         ) : (
-          <>
-            <ul className="list-disc list-outside ml-6">
-              {props.feedback.map((element, i) => {
-                return (
-                  <li className="mb-2" key={i}>
-                    {element}
-                  </li>
-                );
-              })}
-            </ul>
-          </>
+          <FeedbackText feedback={props.feedback} />
         )}
       </div>
     </div>
+  );
+};
+
+const FeedbackInlineLoader = () => {
+  return (
+    <>
+      <div>
+        <div className="flex justify-center m-auto">
+          <RotatingLines
+            strokeColor="skyblue"
+            strokeWidth="5"
+            animationDuration="0.75"
+            width="46"
+            visible={true}
+            wrapperStyle={{ margin: "auto" }}
+          />
+        </div>
+        <div className="text-center">
+          <p>
+            Getting AI Feedback for this section. This might take some time!
+          </p>
+        </div>
+      </div>
+    </>
+  );
+};
+
+const FeedbackText = (props) => {
+  return (
+    <>
+      {props.feedback.length === 0 ? (
+        <>
+          <p className="italic text-neutral-500">No feedback available!</p>
+        </>
+      ) : (
+        <>
+          <ul className="list-disc list-outside ml-6">
+            {props.feedback.map((element, i) => {
+              return (
+                <li className="mb-2" key={i}>
+                  {element}
+                </li>
+              );
+            })}
+          </ul>
+        </>
+      )}
+    </>
   );
 };

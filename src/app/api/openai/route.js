@@ -21,8 +21,8 @@ export async function POST(req) {
       method: "POST",
       body: JSON.stringify({
         model: "gpt-4",
-        max_tokens: 400,
-        temperature: 0.3,
+        max_tokens: 300,
+        temperature: 0.2,
         messages: [
           { role: "system", content: body.systemContext },
           { role: "user", content: body.speechText },
